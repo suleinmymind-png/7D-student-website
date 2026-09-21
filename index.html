@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>home</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- CDN Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <center>
+    <h1>7D📌</h1>
+  </center>
+  <nav class="navbar">
+    <a href="index.html" class="link_home">Home</a>
+    <a href="pelajaran.html" class="link_pelajaran">Pelajaran</a>
+    <a href="PR.html" class="link_PR">PR</a>
+  </nav>
+  <h5>Origin:</h5>
+  <br>
+  <p>SMPN 2 Gelumbang (yang akrab dikenal dengan singkatan Spendagel) merupakan salah satu lembaga pendidikan menengah pertama negeri yang berakar di wilayah Kecamatan Gelumbang, Kabupaten Muara Enim, Provinsi Sumatera Selatan. Berlokasi strategis di Jalan Raya Karang Endah No. 17, Desa Karang Endah, sekolah ini didirikan oleh pemerintah untuk memperluas akses pendidikan bermutu bagi masyarakat sekitar. Melalui komitmen moral yang kuat dengan semboyan "Santun Berprestasi", sekolah ini terus bertransformasi dari sekadar sarana pemenuhan kebutuhan belajar lokal menjadi wadah pembentukan karakter yang unggul, adaptif, serta berwawasan lingkungan bagi generasi muda di Muara Enim.</p>
+  <br>
+  <b>Created By:</b>
+  <h4>Faqih</h4>
+
+  <!-- Script Firebase dan script.js -->
+  <script>
+    // Ganti sesuai konfigurasi Firebase kamu
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaCZT2gtDN45i9Hwza5qOJAYsCRviVcKA",
+      authDomain: "pr-project-61a77.firebaseapp.com",
+      projectId: "pr-project-61a77",
+      storageBucket: "pr-project-61a77.firebasestorage.app",
+      messagingSenderId: "916086754491",
+      appId: "1:916086754491:web:b05accd75cf58604562d9e"
+    };
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Tambah global data PR dan fungsi
+    let dataPR = [];
+    const MAKSIMAL_MURID = 37;
+
+    // Load data dari Firebase
+    async function loadDataFromFirebase() {
+      dataPR = [];
+      const snapshot = await getDocs(collection(db, "list_pr_kelas"));
+      snapshot.forEach(doc => {
+        dataPR.push({ id: parseInt(doc.id), ...doc.data() });
+      });
+      simpanDanTampilkan();
+    }
+
+    // Fungsi simpan ke Firebase
+    async function saveDataToFirebase() {
+      // Hapus semua data lama
+      const collectionRef = collection(db, "list_pr_kelas");
+      const snapshot = await getDocs(collectionRef);
+      for (const docSnap of snapshot.docs) {
+        await deleteDoc(doc(db, "list_pr_kelas", docSnap.id));
+      }
+      // Simpan data baru
+      for (const pr of dataPR) {
+        await addDoc(collectionRef, {
+          mataPelajaran: pr.mataPelajaran,
+          detail: pr.detail,
+          jumlahSudah: pr.jumlahSudah
+        });
+      }
+    }
+
+    // Fungsi tambah PR
+    function tambahPR() {
+      const mapel = document.getElementById('mapel').value;
+      const deskripsi = document.getElementById('deskripsi').value;
+      if (mapel.trim() === "" || deskripsi.trim() === "") {
+        alert("Mohon isi nama pelajaran dan detail tugasnya!");
+        return;
+      }
+      const prBaru = {
+        id: Date.now(),
+        mataPelajaran: mapel,
+        detail: deskripsi,
+        jumlahSudah: 0
+      };
+      dataPR.push(prBaru);
+      simpanDanTampilkan();
+      saveDataToFirebase();
+      document.getElementById('mapel').value = "";
+      document.getElementById('deskripsi').value = "";
+    }
+
+    // Fungsi ceklist selesai
+    async function tekanCeklis(idPR) {
+      const pr = dataPR.find(item => item.id === idPR);
+      if (pr) {
+        pr.jumlahSudah += 1;
+        if (pr.jumlahSudah >= MAKSIMAL_MURID) {
+          alert(`Semua murid (${MAKSIMAL_MURID} orang) telah menyelesaikan PR ${pr.mataPelajaran}!`);
+          dataPR = dataPR.filter(item => item.id !== idPR);
+        }
+        simpanDanTampilkan();
+        await saveDataToFirebase();
+      }
+    }
+
+    // Tampilkan data ke layar
+    function simpanDanTampilkan() {
+      const kontainer = document.getElementById('daftar-pr');
+      kontainer.innerHTML = "";
+      if (dataPR.length === 0) {
+        kontainer.innerHTML = "<p>Bebas tugas! Tidak ada PR aktif saat ini. 🎉</p>";
+        return;
+      }
+      dataPR.forEach(pr => {
+        kontainer.innerHTML += `
+        <div class="pr-card">
+          <h3>📚 ${pr.mataPelajaran}</h3>
+          <p>${pr.detail}</p>
+          <div style="margin-bottom: 12px;">
+            <button onclick="tekanCeklis(${pr.id})">Selesai</button>
+          </div>
+          <small>Sudah: ${pr.jumlahSudah} / ${MAKSIMAL_MURID}</small>
+        </div>
+        `;
+      });
+    }
+
+    // Muat data saat halaman ready
+    loadDataFromFirebase();
+
+  </script>
+</body>
+</html>
